@@ -1,0 +1,31 @@
+{
+  "name": "@local/dsh-planner",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Persistent memos, lightweight tasks, a calendar and an inline daily overview for DeepSeek Harness",
+  "license": "MIT",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": ["index.js", "core.js", "runtime.js", "tools.js", "client.js", "cordis.patch.yml", "icon.svg", "locale/*.json", "README.md"],
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "check": "node --check index.js && node --check core.js && node --check runtime.js && node --check tools.js && node --check client.js"
+  },
+  "engines": { "node": ">=22", "dsh": ">=0.2.2-rc.1" },
+  "dependencies": { "zod": "4.4.3" },
+  "peerDependencies": { "@deepseek-ai/schemastery": "~3.19.0" },
+  "peerDependenciesMeta": { "@deepseek-ai/schemastery": { "optional": true } },
+  "dsh": {
+    "bundle": { "patch": "./cordis.patch.yml" },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": ["@deepseek-ai/dsh-client-ui-conversation", "@deepseek-ai/dsh-client-ui-layout", "@deepseek-ai/dsh-client-locale"]
+    }
+  }
+}

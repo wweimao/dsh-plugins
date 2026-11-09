@@ -1,0 +1,3 @@
+- insert:
+    - id: model-hub
+      name: '@local/dsh-model-hub'

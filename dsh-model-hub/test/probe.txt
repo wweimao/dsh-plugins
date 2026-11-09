@@ -1,0 +1,2 @@
+This is a non-sensitive, read-only fixture for a native cross-provider subagent check.
+Verification marker: MODEL_HUB_FLASH_TOOL_OK

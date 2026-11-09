@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "SSH servers",
+    "description": "Manage saved SSH connections with independently verified host keys. Agents use aliases through separate SSH tools alongside local tools; credentials are entered only in Settings."
+  }
+}

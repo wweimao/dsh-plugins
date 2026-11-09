@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+.npm-cache/
+.cache/
+
+# Build outputs & archives
+dist/
+*.tgz
+*.tar.gz
+*.zip
+npm-package/
+
+# Environment, secrets & temporary files
+.env
+.env.*
+*.pem
+*.key
+storage/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# OS & Editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~

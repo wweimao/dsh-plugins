@@ -1,0 +1,24 @@
+{
+  "name": "@local/dsh-model-hub",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Shared model pool and native dynamic cross-provider subagent selection for DeepSeek Harness",
+  "type": "module",
+  "license": "MIT",
+  "exports": { ".": "./index.js", "./client": "./client.js" },
+  "files": ["index.js", "core.js", "pool.js", "client.js", "cordis.patch.yml", "README.md", "test/*.js", "test/*.cjs", "test/probe.txt"],
+  "scripts": {
+    "test": "node --test test/*.test.js test/*.test.cjs",
+    "check": "node --check index.js && node --check core.js && node --check pool.js && node --check client.js"
+  },
+  "engines": { "node": ">=22", "dsh": ">=0.2.2-rc.1" },
+  "peerDependencies": { "@deepseek-ai/schemastery": "~3.19.0" },
+  "peerDependenciesMeta": { "@deepseek-ai/schemastery": { "optional": true } },
+  "dsh": {
+    "bundle": { "patch": "./cordis.patch.yml" },
+    "client": {
+      "platform": "web", "immediately": true,
+      "inject": ["@deepseek-ai/dsh-client-ui-settings", "@deepseek-ai/dsh-client-locale"]
+    }
+  }
+}

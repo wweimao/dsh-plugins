@@ -1,0 +1,26 @@
+{
+  "name": "@local/dsh-named-ssh",
+  "version": "0.1.2",
+  "private": true,
+  "description": "SSH tools with user-managed saved credentials and pinned host keys for DeepSeek Harness",
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": ["index.js", "core.js", "client.js", "cordis.patch.yml", "locale/*.json", "icon.svg", "README.md", "test/*.js"],
+  "scripts": {"test": "node --test test/*.test.js", "check": "node --check index.js && node --check core.js && node --check client.js"},
+  "engines": {"node": ">=22", "dsh": ">=0.2.2-rc.1"},
+  "dependencies": {"ssh2": "1.17.0"},
+  "dsh": {
+    "bundle": {"patch": "./cordis.patch.yml"},
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": ["@deepseek-ai/dsh-client-ui-settings", "@deepseek-ai/dsh-client-locale"]
+    }
+  }
+}
