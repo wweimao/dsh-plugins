@@ -4408,12 +4408,18 @@ function createAntiGravityComposerQuota(React, ReactDOM, env = globalThis) {
   };
   function familyOf(current) {
     if (current?.provider !== 'google-antigravity' || typeof current.model !== 'string') return undefined;
+    // Argon has its own allowance; never borrow the ordinary Gemini pool.
+    if (/^gemini-4-argon(?:-|$)/.test(current.model)) return 'argon';
     if (current.model.startsWith('gemini-')) return 'gemini';
     if (/^(claude-|gpt-)/.test(current.model)) return 'claude-gpt';
     return undefined;
   }
   function groupFamily(group) {
-    const label = typeof group?.label === 'string' ? group.label : '';
+    const label = typeof group?.label === 'string' ? group.label.trim().replace(/\s+/g, ' ') : '';
+    if (/\bargon\b/i.test(label)) {
+      // Recognize the dedicated group, but reject combined/ambiguous labels.
+      return /^(?:Gemini 4 )?Argon(?: Models?)?$/i.test(label) ? 'argon' : undefined;
+    }
     const gemini = /\bgemini\b/i.test(label), claude = /\b(?:claude|gpt)\b/i.test(label);
     return gemini === claude ? undefined : gemini ? 'gemini' : 'claude-gpt';
   }

@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-llm-pi-ai-antigravity",
   "description": "Google Anti Gravity and Cloud Code Assist Coding Plan LLM Provider plugin for DeepSeek Harness",
-  "version": "0.1.0-rc.5.quota.1.windows.1",
+  "version": "0.1.0-rc.5.quota.3.windows.1",
   "engines": { "node": ">=22.19.0", "dsh": ">=0.2.2-rc.1" },
   "private": true,
   "type": "module",
@@ -45,6 +45,7 @@
     "src/client-config-runtime.js",
     "src/client/composer-quota.js",
     "COMPOSER-QUOTA.md",
+    "ARGON-ACCESS.md",
     "src/transcript-compat.js",
     "src/stream-diagnostics.js",
     "NATIVE-CONTEXT-REPAIR.md",

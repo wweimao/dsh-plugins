@@ -167,7 +167,7 @@ test('PKCE exchange and real runtime platform headers match the browser handoff'
     assert.equal(body.get('client_id'), pair.clientId);
     assert.equal(body.get('client_secret'), pair.clientSecret);
     assert.equal(createHash('sha256').update(body.get('code_verifier')).digest('base64url'), attempt.auth.searchParams.get('code_challenge'));
-    assert.match(attempt.calls[1].options.headers['user-agent'], new RegExp(`${process.platform}/${process.arch}$`));
+    assert.match(attempt.calls[1].options.headers['user-agent'], new RegExp(`os_type=${process.platform}; arch=${process.arch}\\)$`));
   } finally { attempt.controller.abort(); await attempt.pending.catch(() => {}); }
 });
 

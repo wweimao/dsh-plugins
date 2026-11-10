@@ -18,7 +18,7 @@ export function antiGravityHeaders(access) {
   return {
     authorization: `Bearer ${access}`,
     'content-type': 'application/json',
-    'user-agent': `antigravity/${appVersion()} ${process.platform}/${process.arch}`,
+    'user-agent': `antigravity/hub/${appVersion()} (aidev_client; os_type=${process.platform}; arch=${process.arch})`,
   };
 }
 
