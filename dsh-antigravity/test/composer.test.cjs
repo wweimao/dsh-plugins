@@ -1,6 +1,6 @@
 'use strict';
 
-// Offline contract tests only: no network, credentials, real model calls or Argon.
+// Offline contract tests only: no network, credentials or real model calls.
 // This file imports the actual ESM source; all clocks and describe responses are local.
 const test = require('node:test');
 const assert = require('node:assert/strict');

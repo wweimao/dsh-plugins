@@ -1,11 +1,11 @@
 'use strict';
 
 // MOCK REACT HOOKS / VIRTUAL HOST TESTS, NOT BROWSER ACCEPTANCE.
-// React, ReactDOM, jsdom and Testing Library are absent in this workspace.
+// This dependency-free harness does not load ReactDOM, jsdom or Testing Library.
 // The deliberately small driver implements hook state, dependency cleanup, external
 // store subscriptions, refs and portal structure. It does NOT validate actual DOM,
 // browser layout, React scheduling/StrictMode, CSS rendering or accessibility tooling.
-// Only the two requested new test files are needed; no dependencies or network.
+// Tests run offline without third-party test dependencies or network requests.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { pathToFileURL } = require('node:url');

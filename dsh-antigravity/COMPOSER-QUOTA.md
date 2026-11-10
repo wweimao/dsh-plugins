@@ -10,8 +10,8 @@
 
 ## 构建与验证
 
-当前安装包的TypeScript源码早于既有设置页/模型开关修复，不能整体重编译替换。此次采用可重复的纯JavaScript overlay构建：保留已安装客户端facade，只嵌入新 `src/client/composer-quota.js`、扩展locale、声明modelDirectories依赖和注册新插槽。对应构建工具/基线/测试保存在工作区 composer-quota 目录。没有改动宿主OAuth、额度接口、原生上下文/流或Typert产物。
+本包部分 TypeScript 源码与既有预构建设置页/模型开关并不同步，不能整体重编译替换。额度徽标采用纯 JavaScript overlay：保留预构建客户端 facade，嵌入 `src/client/composer-quota.js`、扩展 locale、声明 modelDirectories 依赖并注册插槽。所需运行文件与离线测试随包提供；额度徽标本身不改动 OAuth、额度接口、原生上下文/流或 Typert 契约。
 
 38项离线检查覆盖选择器、缓存/超时/生命周期、显式MOCK React组件、完整发布facade挂载、发布清单及基线哈希；另外保留原生上下文/流回归。MOCK与facade测试不等于实际浏览器视觉验收。
 
-本次独立浏览器访问现有GUI的无凭据根URL时收到正常登录保护，未读取/复制用户浏览器登录资料、未绕过认证。部署后须在原有已登录GUI刷新，切换Gemini和Claude确认两项徽标及详情。未声称已在用户窗口截图验收。Argon与真实推理测试继续暂停。
+部署后应在已登录的 DSH GUI 刷新，切换 Gemini 与 Claude，确认两项徽标及详情。视觉验收须使用安装者本人授权的浏览器会话；不能通过读取浏览器登录资料或绕过认证进行验证。离线测试不代表真实账号、实际额度响应或模型推理已验收。

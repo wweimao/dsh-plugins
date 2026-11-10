@@ -20,6 +20,10 @@ export interface Config {
     oauthClientConfigRef?: string;
     /** Optional official Antigravity App path; strict Google signature verification is required. */
     macosApplicationPath?: string;
+    /** Windows Antigravity App directory, not the older IDE directory. */
+    windowsApplicationPath?: string;
+    /** Explicitly approved supported unsigned language-server SHA-256. */
+    windowsApplicationSha256?: string;
     /** Provider label shown in model selectors. */
     displayName?: string;
     /** Maximum provider idle time while one stream read is outstanding. */

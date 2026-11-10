@@ -5,180 +5,13 @@ import { LlmError, assertUsableApiKey, resolveRetryPolicy } from "@deepseek-ai/d
 import { PiAiAdapter } from "@deepseek-ai/dsh-llm-pi-ai";
 import { MAX_TIMER_DELAY_MS } from "@deepseek-ai/dsh-timeout";
 import { convertMessages, convertTools, isThinkingPart, mapStopReasonString, retainThoughtSignature } from "@earendil-works/pi-ai/api/google-shared";
-import { createServer } from "node:http";
-import { createHash, randomBytes, randomUUID } from "node:crypto";
-import { importOfficialAppOAuthConfig, extractOfficialAppOAuthConfig } from "./app-oauth.js";
+import { randomUUID } from "node:crypto";
+import { antiGravityHeaders, createAntiGravityOAuth } from "./oauth-flow.js";
+import { DEFAULT_OAUTH_CLIENT_CONFIG_REF, extractOAuthClientConfig, importInstalledOAuthClientConfig, parseOAuthClientConfig, resolveOAuthClientConfig } from "./client-config-runtime.js";
 import { Remote, TypertRemoteService } from "@deepseek-ai/dsh-typert-protocol";
 import { toLegacyContext } from "./transcript-compat.js";
 import { streamFailure } from "./stream-diagnostics.js";
-//#region lib/types/auth.js
-/** Google Anti Gravity OAuth implementation adapted to pi-ai's provider auth contract. */
-const REDIRECT_URI = "http://localhost:51121/oauth-callback";
-const TOKEN_URL = "https://oauth2.googleapis.com/token";
-const DEFAULT_APP_VERSION = "2.29.0";
-const SCOPES = [
-	"https://www.googleapis.com/auth/cloud-platform",
-	"https://www.googleapis.com/auth/userinfo.email",
-	"https://www.googleapis.com/auth/userinfo.profile",
-	"https://www.googleapis.com/auth/cclog",
-	"https://www.googleapis.com/auth/experimentsandconfigs",
-	"https://www.googleapis.com/auth/aicode"
-];
-function base64Url(input) {
-	return input.toString("base64url");
-}
-async function discoverProject(access, signal) {
-	for (const endpoint of ["https://daily-cloudcode-pa.googleapis.com", "https://cloudcode-pa.googleapis.com"]) try {
-		const response = await fetch(`${endpoint}/v1internal:loadCodeAssist`, {
-			method: "POST",
-			headers: antiGravityHeaders(access),
-			body: JSON.stringify({ metadata: {
-				ideName: "antigravity",
-				ideType: "ANTIGRAVITY",
-				ideVersion: DEFAULT_APP_VERSION
-			} }),
-			...signal === void 0 ? {} : { signal }
-		});
-		if (!response.ok) continue;
-		const body = await response.json();
-		if (typeof body.cloudaicompanionProject === "string" && body.cloudaicompanionProject.length > 0) return body.cloudaicompanionProject;
-		if (typeof body.cloudaicompanionProject === "object" && body.cloudaicompanionProject !== null && typeof body.cloudaicompanionProject.id === "string") return body.cloudaicompanionProject.id;
-	} catch (error) {
-		if (signal?.aborted) throw error;
-	}
-	throw new Error("Anti Gravity OAuth succeeded, but Cloud Code Assist returned no companion project");
-}
-/**
-* Headers shared by Anti Gravity's Cloud Code Assist endpoints.
-* @param access - current OAuth access token.
-* @returns request headers for an authenticated JSON call.
-*/
-function antiGravityHeaders(access) {
-	return {
-		authorization: `Bearer ${access}`,
-		"content-type": "application/json",
-		"user-agent": `antigravity/${DEFAULT_APP_VERSION} darwin/arm64`
-	};
-}
-async function exchange(params, signal) {
-	const response = await fetch(TOKEN_URL, {
-		method: "POST",
-		headers: { "content-type": "application/x-www-form-urlencoded" },
-		body: params,
-		...signal === void 0 ? {} : { signal }
-	});
-	if (!response.ok) throw new Error(`Anti Gravity token exchange failed with HTTP ${response.status}`);
-	return response.json();
-}
-async function login(interaction, clientConfig) {
-	interaction.signal?.throwIfAborted();
-	const verifier = base64Url(randomBytes(32));
-	const challenge = base64Url(createHash("sha256").update(verifier).digest());
-	const state = base64Url(randomBytes(24));
-	const callback = new Promise((resolve, reject) => {
-		const server = createServer((request, response) => {
-			const url = new URL(request.url ?? "/", REDIRECT_URI);
-			if (url.pathname !== "/oauth-callback") {
-				response.writeHead(404).end();
-				return;
-			}
-			const code = url.searchParams.get("code");
-			if (url.searchParams.get("state") !== state || code === null) {
-				response.writeHead(400, { "content-type": "text/plain; charset=utf-8" }).end("Anti Gravity OAuth callback is invalid.");
-				server.close();
-				reject(/* @__PURE__ */ new Error("Anti Gravity OAuth state or code is invalid"));
-				return;
-			}
-			response.writeHead(200, { "content-type": "text/plain; charset=utf-8" }).end("Anti Gravity login completed. You may close this page.");
-			server.close();
-			resolve(code);
-		});
-		server.on("error", reject);
-		server.listen(51121, "127.0.0.1");
-		interaction.signal?.addEventListener("abort", () => {
-			server.close();
-			reject(/* @__PURE__ */ new Error("Anti Gravity OAuth was cancelled"));
-		}, { once: true });
-	});
-	const auth = new URL("https://accounts.google.com/o/oauth2/v2/auth");
-	auth.search = new URLSearchParams({
-		client_id: clientConfig.clientId,
-		response_type: "code",
-		redirect_uri: REDIRECT_URI,
-		scope: SCOPES.join(" "),
-		code_challenge: challenge,
-		code_challenge_method: "S256",
-		state,
-		access_type: "offline",
-		prompt: "consent"
-	}).toString();
-	interaction.notify({
-		type: "auth_url",
-		url: auth.toString(),
-		instructions: "在浏览器完成 Google Anti Gravity 授权。"
-	});
-	const code = await callback;
-	const tokens = await exchange(new URLSearchParams({
-		client_id: clientConfig.clientId,
-		client_secret: clientConfig.clientSecret,
-		code,
-		grant_type: "authorization_code",
-		redirect_uri: REDIRECT_URI,
-		code_verifier: verifier
-	}), interaction.signal);
-	if (tokens.refresh_token === void 0) throw new Error("Anti Gravity OAuth returned no refresh token");
-	const projectId = await discoverProject(tokens.access_token, interaction.signal);
-	return {
-		type: "oauth",
-		access: tokens.access_token,
-		refresh: tokens.refresh_token,
-		expires: Date.now() + tokens.expires_in * 1e3 - 3e5,
-		projectId
-	};
-}
-/**
-* Build the OAuth method around a host-owned, per-operation client-config resolver.
-* @param resolveClientConfig - Resolve the private OAuth client pair for each login or refresh.
-* @returns Provider-native OAuth operations for login, refresh, and request authentication.
-*/
-function createAntiGravityOAuth(resolveClientConfig) {
-	return {
-		name: "Google Anti Gravity",
-		loginLabel: "使用 Google 账号登录 Anti Gravity",
-		login: async (interaction) => {
-			interaction.signal?.throwIfAborted();
-			const clientConfig = await resolveClientConfig();
-			interaction.signal?.throwIfAborted();
-			return login(interaction, clientConfig);
-		},
-		async refresh(credential, signal) {
-			const current = credential;
-			if (typeof current.projectId !== "string" || current.projectId.length === 0) throw new Error("Anti Gravity credential has no Cloud Code Assist project id");
-			const clientConfig = await resolveClientConfig();
-			const tokens = await exchange(new URLSearchParams({
-				client_id: clientConfig.clientId,
-				client_secret: clientConfig.clientSecret,
-				refresh_token: credential.refresh,
-				grant_type: "refresh_token"
-			}), signal);
-			return {
-				...credential,
-				access: tokens.access_token,
-				refresh: tokens.refresh_token ?? credential.refresh,
-				expires: Date.now() + tokens.expires_in * 1e3 - 3e5
-			};
-		},
-		toAuth: (credential) => {
-			const current = credential;
-			if (typeof current.projectId !== "string" || current.projectId.length === 0) throw new Error("Anti Gravity credential has no Cloud Code Assist project id");
-			return Promise.resolve({ apiKey: JSON.stringify({
-				token: credential.access,
-				projectId: current.projectId
-			}) });
-		}
-	};
-}
-//#endregion
+// OAuth runtime is shared with src/oauth-flow.js; preserve the prebuilt transport below.
 //#region lib/types/models.js
 /** Maintained and live-reconciled Anti Gravity model descriptors. */
 /** Stable route and provider identity registered with the generic adapter. */
@@ -713,66 +546,7 @@ const antiGravityApi = {
 	streamSimple: (model, context, options) => streamSimple(model, context, options)
 };
 //#endregion
-//#region lib/types/client-config.js
-/** Resolve Anti Gravity's OAuth application identity without shipping it in source. */
-const CLIENT_ID_PATTERN = /^[0-9]{6,}-[A-Za-z0-9_-]+\.apps\.googleusercontent\.com$/;
-const CLIENT_SECRET_PATTERN = /^GOCSPX-[A-Za-z0-9_-]+$/;
-const CREDENTIAL_REF_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
-/** App-only cache; the old IDE-derived client configuration is never read. */
-const DEFAULT_OAUTH_CLIENT_CONFIG_REF = "GOOGLE_ANTIGRAVITY_APP_OAUTH_CLIENT_CONFIG";
-function validateClientConfig(value) {
-	if (typeof value !== "object" || value === null || Array.isArray(value)) throw new Error("Anti Gravity OAuth client configuration must be a JSON object");
-	const { clientId, clientSecret } = value;
-	if (typeof clientId !== "string" || !CLIENT_ID_PATTERN.test(clientId)) throw new Error("Anti Gravity OAuth client configuration has an invalid clientId");
-	if (typeof clientSecret !== "string" || !CLIENT_SECRET_PATTERN.test(clientSecret)) throw new Error("Anti Gravity OAuth client configuration has an invalid clientSecret");
-	return {
-		clientId,
-		clientSecret
-	};
-}
-/**
-* Parse one credential-store value without exposing either field in diagnostics.
-* @param value - Serialized OAuth client configuration from the credential store.
-* @returns Validated client id and client secret.
-*/
-function parseOAuthClientConfig(value) {
-	try {
-		return validateClientConfig(JSON.parse(value));
-	} catch (error) {
-		if (error instanceof SyntaxError) throw new Error("Anti Gravity OAuth client configuration is not valid JSON");
-		throw error;
-	}
-}
-/** Extract only the reviewed consumer configuration from the official App binary. */
-function extractOAuthClientConfig(source) {
-	return validateClientConfig(extractOfficialAppOAuthConfig(source));
-}
-/** No IDE fallback: signature verification and sealed binary parsing are App-owned. */
-async function importInstalledOAuthClientConfig(applicationPath) {
-	return validateClientConfig(await importOfficialAppOAuthConfig(applicationPath));
-}
-/**
-* Resolve the private client config, importing and persisting it once when absent.
-* @param credentials - Credential store that owns the private client pair.
-* @param refValue - Credential reference used for the serialized client pair.
-* @param applicationPath - Optional explicit application bundle path for first import.
-* @param importer - Import operation used when the credential reference is absent.
-* @returns Validated client configuration for the next OAuth operation.
-*/
-async function resolveOAuthClientConfig(credentials, refValue = DEFAULT_OAUTH_CLIENT_CONFIG_REF, applicationPath, importer = importInstalledOAuthClientConfig) {
-	if (!CREDENTIAL_REF_PATTERN.test(refValue)) throw new Error("Anti Gravity OAuth client credential reference must be a POSIX identifier");
-	const ref = refValue === "GOOGLE_ANTIGRAVITY_OAUTH_CLIENT_CONFIG" ? DEFAULT_OAUTH_CLIENT_CONFIG_REF : refValue;
-	const existing = await credentials.resolve(ref);
-	if (existing !== void 0) {
-		let cached;
-		try { cached = JSON.parse(existing.value); } catch { throw new Error("Anti Gravity App client configuration is not valid JSON"); }
-		if (cached?.source === "official-app") return validateClientConfig(cached);
-	}
-	const imported = validateClientConfig(await importer(applicationPath));
-	await credentials.set(ref, JSON.stringify({ ...imported, source: "official-app" }));
-	return imported;
-}
-//#endregion
+// Application identity resolution is shared with src/client-config-runtime.js.
 //#region lib/types/credential.js
 function isRecord(value) {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -1112,7 +886,7 @@ let AntiGravityAuthRemote = (() => {
 /** Independent Google Anti Gravity provider route and OAuth settings service. */
 const name = "llm-pi-ai-antigravity";
 const inject = ["llm", "credentials", "settings"];
-const DEFAULT_OAUTH_CREDENTIAL_REF = "GOOGLE_ANTIGRAVITY_OAUTH_CREDENTIAL";
+const DEFAULT_OAUTH_CREDENTIAL_REF = process.platform === "win32" ? "GOOGLE_ANTIGRAVITY_WINDOWS_APP_OAUTH_CREDENTIAL" : "GOOGLE_ANTIGRAVITY_OAUTH_CREDENTIAL";
 const DEFAULT_DISPLAY_NAME = "Google Anti Gravity";
 const DEFAULT_STREAM_IDLE_TIMEOUT_MS = 3e5;
 const DEFAULT_MAX_REQUEST_IMAGE_BYTES = 20 * 1024 * 1024;
@@ -1124,6 +898,8 @@ const Config = z.object({
 	oauthCredentialEnv: z.string().role("credential-ref").default(DEFAULT_OAUTH_CREDENTIAL_REF),
 	oauthClientConfigRef: z.string().role("credential-ref").default(DEFAULT_OAUTH_CLIENT_CONFIG_REF),
 	macosApplicationPath: z.string(),
+	windowsApplicationPath: z.string(),
+	windowsApplicationSha256: z.string(),
 	displayName: z.string().default(DEFAULT_DISPLAY_NAME),
 	streamIdleTimeoutMs: z.number().min(Number.MIN_VALUE).max(MAX_TIMER_DELAY_MS).default(DEFAULT_STREAM_IDLE_TIMEOUT_MS),
 	maxRequestImageBytes: z.number().step(1).min(1).default(DEFAULT_MAX_REQUEST_IMAGE_BYTES),
@@ -1146,6 +922,8 @@ function resolveConfig(config) {
 		oauthClientConfigRef: config.oauthClientConfigRef === void 0 || config.oauthClientConfigRef === "GOOGLE_ANTIGRAVITY_OAUTH_CLIENT_CONFIG" ? DEFAULT_OAUTH_CLIENT_CONFIG_REF : config.oauthClientConfigRef,
 		// Old default IDE-path overrides do not keep the retired importer alive.
 		...config.macosApplicationPath === void 0 || /(?:^|\/)Antigravity IDE\.app\/?$/.test(config.macosApplicationPath) ? {} : { macosApplicationPath: config.macosApplicationPath },
+		...config.windowsApplicationPath === void 0 ? {} : { windowsApplicationPath: config.windowsApplicationPath },
+		...config.windowsApplicationSha256 === void 0 ? {} : { windowsApplicationSha256: config.windowsApplicationSha256 },
 		displayName,
 		streamIdleTimeoutMs,
 		maxRequestImageBytes,
@@ -1204,7 +982,7 @@ function apply(ctx, rawConfig) {
 	ctx.effect(() => ctx.settings.configure({ auto: false }, ctx.fiber));
 	const emptyOverrides = {};
 	const modelOverrides = () => typeof rawConfig.modelEnabled?.get === "function" ? rawConfig.modelEnabled.get() : rawConfig.modelEnabled ?? emptyOverrides;
-	const oauth = createAntiGravityOAuth(() => resolveOAuthClientConfig(ctx.credentials, config.oauthClientConfigRef, config.macosApplicationPath));
+	const oauth = createAntiGravityOAuth(() => resolveOAuthClientConfig(ctx.credentials, config.oauthClientConfigRef, process.platform === "win32" ? config.windowsApplicationPath : config.macosApplicationPath, undefined, { sha256: config.windowsApplicationSha256 }));
 	const credentials = new AntiGravityCredentialManager(ctx.credentials, config.oauthCredentialEnv, oauth);
 	// Do not advertise obsolete static models before the account catalog is known.
 	let liveModels = [];

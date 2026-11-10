@@ -1,12 +1,13 @@
 {
   "name": "@deepseek-ai/dsh-llm-pi-ai-antigravity",
   "description": "Google Anti Gravity and Cloud Code Assist Coding Plan LLM Provider plugin for DeepSeek Harness",
-  "version": "0.1.0-rc.5.quota.1",
+  "version": "0.1.0-rc.5.quota.1.windows.1",
+  "engines": { "node": ">=22.19.0", "dsh": ">=0.2.2-rc.1" },
   "private": true,
   "type": "module",
   "scripts": {
     "test": "node --test test/*.test.cjs",
-    "check": "node --check lib/index.js && node --check lib/client.js",
+    "check": "node --check lib/index.js && node --check lib/client.js && node --check lib/app-oauth.js && node --check lib/windows-app-oauth.js && node --check lib/client-config-runtime.js && node --check lib/oauth-flow.js",
     "bundle": "tsdown && node scripts/gen-typert.mjs",
     "watch": "tsdown --watch"
   },
@@ -28,6 +29,9 @@
     "lib/transcript-compat.js",
     "lib/stream-diagnostics.js",
     "lib/app-oauth.js",
+    "lib/windows-app-oauth.js",
+    "lib/oauth-flow.js",
+    "lib/client-config-runtime.js",
     "lib/invariant.js",
     "lib/client.js",
     "lib/types/**/*.d.ts",
@@ -36,6 +40,9 @@
     "lib/typert.remote-client.js",
     "lib/typert.remote-client.d.ts",
     "src/app-oauth.js",
+    "src/windows-app-oauth.js",
+    "src/oauth-flow.js",
+    "src/client-config-runtime.js",
     "src/client/composer-quota.js",
     "COMPOSER-QUOTA.md",
     "src/transcript-compat.js",
@@ -64,8 +71,8 @@
     "type": "git",
     "url": "git+https://github.com/wweimao/dsh-plugins.git"
   },
-  "homepage": "https://github.com/OpenSaozi/dsh-antigravity#readme",
-  "bugs": { "url": "https://github.com/OpenSaozi/dsh-antigravity/issues" },
+  "homepage": "https://github.com/wweimao/dsh-plugins/tree/main/dsh-antigravity#readme",
+  "bugs": { "url": "https://github.com/wweimao/dsh-plugins/issues" },
   "keywords": [
     "deepseek",
     "deepseek-harness",

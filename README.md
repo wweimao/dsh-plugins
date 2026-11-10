@@ -8,7 +8,7 @@
 
 | 插件目录 | 包名 | 说明 | 核心能力 |
 |---|---|---|---|
-| [`dsh-antigravity`](./dsh-antigravity) | `@deepseek-ai/dsh-llm-pi-ai-antigravity` | Google Anti Gravity LLM Provider | 直连 Cloud Code Assist (Gemini / Claude / GPT)，一键 macOS OAuth 授权、Thinking 档位映射、输入框 5h/周额度徽标及原生上下文桥接 |
+| [`dsh-antigravity`](./dsh-antigravity) | `@deepseek-ai/dsh-llm-pi-ai-antigravity` | Google Anti Gravity LLM Provider | 直连 Cloud Code Assist (Gemini / Claude / GPT)，macOS 签名导入与 Windows x64 固定版本显式批准导入、浏览器 OAuth、Thinking 档位映射、5h/周额度及原生上下文桥接 |
 | [`dsh-model-hub`](./dsh-model-hub) | `@local/dsh-model-hub` | 统一模型池与跨渠道调度 | 汇集各挂载渠道模型，主 Agent 动态挑选子代理，支持两阶段授权与安全过滤 |
 | [`dsh-named-ssh`](./dsh-named-ssh) | `@local/dsh-named-ssh` | 独立 SSH 服务器别名工具 | 用户设置页保管凭据与主机指纹，Agent 仅通过别名受控执行远程命令 |
 | [`dsh-planner`](./dsh-planner) | `@local/dsh-planner` | 本地计划本与任务备忘 | 原生 storageDomain 持久化，提供工单、纯文本备忘、月历看板及 AI 工具 |
@@ -71,7 +71,9 @@ dsh-plugins/
 
 ## 安装使用
 
-各个插件为独立的 DSH 插件包，可按需安装具体插件子目录：
+各个插件为独立的 DSH 插件包，可按需安装具体插件子目录。
+
+**AntiGravity Windows 用户注意：** 仅支持已评审的 App 2.30.0 x64 构建，公开包不会自动批准未签名程序；需要本人核对来源与 SHA-256 并显式设置 `windowsApplicationSha256`，详见 [Windows 配置说明](./dsh-antigravity/README.zh.md#windows-支持010-rc5quota1windows1)。macOS 继续使用签名校验导入。
 
 ### 方式一：通过 DSH Plugin Manager（推荐）
 在 DSH 插件管理界面中安装或通过命令：

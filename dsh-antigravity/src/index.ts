@@ -53,7 +53,8 @@ export type {
 export const name = 'llm-pi-ai-antigravity'
 export const inject = ['llm', 'credentials']
 
-const DEFAULT_OAUTH_CREDENTIAL_REF = 'GOOGLE_ANTIGRAVITY_OAUTH_CREDENTIAL'
+const DEFAULT_OAUTH_CREDENTIAL_REF = process.platform === 'win32'
+  ? 'GOOGLE_ANTIGRAVITY_WINDOWS_APP_OAUTH_CREDENTIAL' : 'GOOGLE_ANTIGRAVITY_OAUTH_CREDENTIAL'
 const DEFAULT_DISPLAY_NAME = 'Google Anti Gravity'
 const DEFAULT_STREAM_IDLE_TIMEOUT_MS = 300_000
 const DEFAULT_MAX_REQUEST_IMAGE_BYTES = 20 * 1024 * 1024
@@ -68,6 +69,10 @@ export interface Config {
   oauthClientConfigRef?: string
   /** Optional nonstandard macOS application path; the Google signature is still required. */
   macosApplicationPath?: string
+  /** Optional Windows Antigravity application directory (not the older IDE directory). */
+  windowsApplicationPath?: string
+  /** User-approved SHA-256 for the supported unsigned Windows language-server build. */
+  windowsApplicationSha256?: string
   /** Provider label shown in model selectors. */
   displayName?: string
   /** Maximum provider idle time while one stream read is outstanding. */
@@ -89,6 +94,8 @@ export const Config: z<Config> = z.object({
   oauthCredentialEnv: z.string().role('credential-ref').default(DEFAULT_OAUTH_CREDENTIAL_REF),
   oauthClientConfigRef: z.string().role('credential-ref').default(DEFAULT_OAUTH_CLIENT_CONFIG_REF),
   macosApplicationPath: z.string(),
+  windowsApplicationPath: z.string(),
+  windowsApplicationSha256: z.string(),
   displayName: z.string().default(DEFAULT_DISPLAY_NAME),
   streamIdleTimeoutMs: z.number().min(Number.MIN_VALUE).max(MAX_TIMER_DELAY_MS).default(DEFAULT_STREAM_IDLE_TIMEOUT_MS),
   maxRequestImageBytes: z.number().step(1).min(1).default(DEFAULT_MAX_REQUEST_IMAGE_BYTES),
@@ -100,6 +107,8 @@ interface ResolvedConfig {
   readonly oauthCredentialEnv: ReturnType<typeof credentialRef>
   readonly oauthClientConfigRef: string
   readonly macosApplicationPath?: string
+  readonly windowsApplicationPath?: string
+  readonly windowsApplicationSha256?: string
   readonly displayName: string
   readonly streamIdleTimeoutMs: number
   readonly maxRequestImageBytes: number
@@ -137,6 +146,8 @@ function resolveConfig(config: Config): ResolvedConfig {
     // Old default IDE-path overrides do not keep the retired importer alive.
     ...config.macosApplicationPath === undefined || /(?:^|\/)Antigravity IDE\.app\/?$/.test(config.macosApplicationPath)
       ? {} : { macosApplicationPath: config.macosApplicationPath },
+    ...config.windowsApplicationPath === undefined ? {} : { windowsApplicationPath: config.windowsApplicationPath },
+    ...config.windowsApplicationSha256 === undefined ? {} : { windowsApplicationSha256: config.windowsApplicationSha256 },
     displayName,
     streamIdleTimeoutMs,
     maxRequestImageBytes,
@@ -203,7 +214,9 @@ export function apply(ctx: Context, rawConfig: Config): void {
   const oauth = createAntiGravityOAuth(() => resolveOAuthClientConfig(
     ctx.credentials,
     config.oauthClientConfigRef,
-    config.macosApplicationPath,
+    process.platform === 'win32' ? config.windowsApplicationPath : config.macosApplicationPath,
+    undefined,
+    { sha256: config.windowsApplicationSha256 },
   ))
   const credentials = new AntiGravityCredentialManager(ctx.credentials, config.oauthCredentialEnv, oauth)
   new AntiGravityAuthRemote(ctx, ctx.credentials, config.oauthCredentialEnv, oauth)

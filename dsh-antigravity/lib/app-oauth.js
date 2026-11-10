@@ -5,6 +5,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { createHash } from "node:crypto";
 import { basename, isAbsolute, join, resolve } from "node:path";
+import { importWindowsAppOAuthConfig } from "./windows-app-oauth.js";
 
 const execFileAsync = promisify(execFile);
 const DEFAULT_APP = "/Applications/Antigravity.app";
@@ -241,11 +242,12 @@ function sealedBinaryHash(manifest) {
   check(/^[A-Za-z0-9+/]{43}=$/.test(hash) && Buffer.from(hash, "base64").length === 32, "invalid language server resource seal"); return hash;
 }
 
-/** Verify the Google-signed App twice, then return only its normal public OAuth application pair. */
-export async function importOfficialAppOAuthConfig(applicationPath = DEFAULT_APP) {
-  check(process.platform === "darwin", "automatic App import is supported only on macOS");
+/** macOS uses the Google signature; Windows requires explicit approval of a supported binary hash. */
+export async function importOfficialAppOAuthConfig(applicationPath, options = {}) {
+  if (process.platform === "win32") return importWindowsAppOAuthConfig(applicationPath, options);
+  check(process.platform === "darwin", "automatic App import supports macOS and an approved Windows build only");
   try {
-    const root = await inspectPath(applicationPath), firstIdentity = await verifySignedApp(root);
+    const root = await inspectPath(applicationPath ?? DEFAULT_APP), firstIdentity = await verifySignedApp(root);
     const manifestPath = join(root, "Contents/_CodeSignature/CodeResources"), binaryPath = join(root, "Contents/Resources/bin/language_server");
     const manifest = await readBounded(manifestPath, MAX_MANIFEST_BYTES);
     const binary = await readBounded(binaryPath, MAX_IMAGE_BYTES);
