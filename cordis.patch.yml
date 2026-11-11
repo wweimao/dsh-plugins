@@ -1,0 +1,7 @@
+# Reversible overlay: disabling this bundle restores the upstream row.
+- id: deja
+  name: dsh-deja
+  disabled: true
+- insert:
+    - id: deja-reliability
+      name: '@local/dsh-deja-reliability'

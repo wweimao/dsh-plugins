@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Deja memory reliability",
+    "description": "Local reliability overlay for deja-vu: cancellable queries, current-session directories, bounded recall and diagnostics. Disable this bundle to restore the upstream plugin."
+  }
+}

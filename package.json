@@ -1,0 +1,21 @@
+{
+  "name": "@local/dsh-deja-reliability",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Reliable local deja-vu memory: asynchronous queries, session-aware directories and bounded recall caches for DSH.",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": ["*.js", "cordis.patch.yml", "locale/*.json", "icon.svg", "README.md", "LICENSE"],
+  "license": "MIT",
+  "engines": { "node": ">=22", "dsh": ">=0.2.2-rc.1" },
+  "dsh": { "bundle": { "patch": "./cordis.patch.yml" }, "client": { "platform": "web" } },
+  "dependencies": { "@vshulcz/deja-vu": "0.23.5", "zod": "4.4.3", "@deepseek-ai/schemastery": "3.19.0" },
+  "scripts": { "test": "node --test test/*.test.js" }
+}
