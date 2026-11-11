@@ -1,0 +1,5 @@
+- insert:
+    - id: local-planner
+      name: '@local/dsh-planner'
+      config:
+        timeZone: Asia/Shanghai

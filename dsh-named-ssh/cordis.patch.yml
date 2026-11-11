@@ -1,0 +1,3 @@
+- insert:
+    - id: named-ssh
+      name: '@local/dsh-named-ssh'

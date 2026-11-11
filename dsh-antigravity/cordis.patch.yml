@@ -1,0 +1,5 @@
+- insert:
+    - id: llm-pi-ai-antigravity
+      name: '@deepseek-ai/dsh-llm-pi-ai-antigravity'
+      config:
+        displayName: Google Anti Gravity

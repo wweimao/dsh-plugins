@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Allow-all permission preset",
+    "description": "Adds an unrestricted permission preset that bypasses sandbox limits and automatically approves all agent operations."
+  }
+}
