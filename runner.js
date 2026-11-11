@@ -121,14 +121,17 @@ export function createRunner({
       const streamError = (error) => stop(spawnFailure(error));
       child.stdout?.on('error', streamError);
       child.stderr?.on('error', streamError);
-      child.stdin?.on('error', (error) => {
-        // A command may successfully exit without consuming all of its stdin.
-        if (error.code !== 'EPIPE' && error.code !== 'ERR_STREAM_DESTROYED') streamError(error);
-      });
+      const stdinError = (error) => {
+        // A child may close stdin before consuming it: libuv reports EOF on
+        // Windows named pipes, EPIPE on POSIX. Only close(code === 0) confirms
+        // success; ignoring these pipe errors must not hide a failed exit.
+        if (!['EPIPE', 'EOF', 'ERR_STREAM_DESTROYED'].includes(error?.code)) streamError(error);
+      };
+      child.stdin?.on('error', stdinError);
       signal?.addEventListener('abort', onAbort, { once: true });
       timer = setTimeout(() => stop(failure('timeout')), positive(duration, defaultTimeout));
       if (disposed || signal?.aborted) return onAbort();
-      try { child.stdin?.end(input); } catch (error) { streamError(error); }
+      try { child.stdin?.end(input); } catch (error) { stdinError(error); }
     });
   }
 

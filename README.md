@@ -64,6 +64,16 @@ node --test test/*.test.js
 - 已验证实际 `deja_recall` 查询，以及当前会话运行上下文中的增强版自动召回。
 - 已确认客户端通知槽位和安装后的中英文元数据、原创 SVG 资源；未进行截图式视觉验收。
 
+## Windows 兼容性验证（2026-11-11）
+
+- Windows / Node 24.21.0：41 项回归测试全部通过，无跳过。
+- 修复子进程未读完 stdin 就正常退出时，Windows 管道 `EOF` 被误判为执行失败；与 POSIX `EPIPE` 一样等待最终退出码，非零退出仍返回失败。同步抛出的管道关闭错误遵循相同规则。
+- schema 对比测试先规范化 CRLF；路径断言使用宿主平台的 `resolve`，不再假设 POSIX 路径。
+- 真实子进程终止测试分别断言 Windows 强制终止和 POSIX 信号行为；另以确定性子进程替身在所有平台验证探测和执行阶段的 `SIGTERM` → `SIGKILL` 升级，不跳过该覆盖。
+- 本次未在 Linux/macOS 实机执行测试；跨平台断言不等同于其他操作系统已验收。
+- 插件管理器安装返回 `application: applied`，增强 bundle 已启用并覆盖原 `deja` 行。模块加载、六个工具注册及真实 CLI 查询已验证；历史索引尚未构建完毕，不据此宣称检索准确率或全量历史可用。
+- 本次未进行浏览器截图式验收。
+
 ## 来源与资源
 
 `lib.js`、`client.js` 及 `upstream/index.js` 来源于 Vladislav Shulcz 的 `deja-vu/extensions/dsh` 0.23.5（MIT）。`upstream/` 仅供本地回归比较，不参与发布。`icon.svg` 为本地原创矢量图标，随本包按 MIT 许可使用。

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import * as helpers from '../lib.js';
 import { defaults, currentDirectory, sessionCache, historyContext, initialProjection, foldProjection } from '../core.js';
 import { registerTools, registerCommands, healthStats } from '../tools.js';
@@ -96,6 +96,7 @@ test('model-facing schemas are byte-identical to upstream (zero first-turn promp
   const f = fixture(); registerTools(f.ctx, x => x, f.runtime);
   const old = new Map();
   let source = readFileSync(new URL('../upstream/index.js', import.meta.url), 'utf8')
+    .replace(/\r\n/g, '\n')
     .replace(/^import .*;\n/gm, '')
     .replace('const require = createRequire(import.meta.url);', 'const require = {resolve() { throw new Error(); }};')
     .replace('let defineTool = null;\ntry {\n  ({ defineTool } = await import("@deepseek-ai/dsh-tools"));\n} catch {}', 'const defineTool = x => x;')
@@ -180,7 +181,7 @@ test('feature switches, file deduplication, turn budget and shell failure routin
   assert.equal(result.additionalContexts[0].id, 'other-plugin');
   assert.equal(result.additionalContexts.length, 2);
   assert.equal(f.calls[0].args[0], 'hook-tool');
-  assert.equal(JSON.parse(f.calls[0].input).tool_input.file_path, '/a/current/src/a.js');
+  assert.equal(JSON.parse(f.calls[0].input).tool_input.file_path, resolve('/a/current', 'src/a.js'));
   await f.post('read', { file_path: 'src/a.js' }); assert.equal(f.calls.length, 1);
   await f.post('bash', { command: 'test' }, 'success\n[exit code: 0]'); assert.equal(f.calls.length, 1);
   await f.post('bash', { command: 'test' }, 'error\n[exit code: 1]\n'); assert.equal(f.calls.length, 2);

@@ -240,8 +240,9 @@ test('cancellation is prompt and escalates if an actual run ignores SIGTERM', { 
   const result = await runner.run(js('process.on("SIGTERM", () => {}); process.stdout.write("ready"); setInterval(() => {}, 1000)'), { signal: controller.signal });
   assert.deepEqual(result, failure('aborted'));
   const [, signal] = await childClosed;
-  assert.equal(signal, 'SIGKILL');
-  assert.deepEqual(kills, ['SIGTERM', 'SIGKILL']);
+  // Windows forcibly terminates on SIGTERM; POSIX handlers can ignore it.
+  assert.equal(signal, process.platform === 'win32' ? 'SIGTERM' : 'SIGKILL');
+  assert.deepEqual(kills, process.platform === 'win32' ? ['SIGTERM'] : ['SIGTERM', 'SIGKILL']);
 });
 
 test('dispose terminates all active probes and actual runs and forbids new spawns', async (t) => {
@@ -332,7 +333,64 @@ test('dispose escalates a version probe that ignores termination', { timeout: 30
   });
   assert.deepEqual(await runner.run([]), failure('aborted'));
   const [, signal] = await childClosed;
-  assert.equal(signal, 'SIGKILL');
+  assert.equal(signal, process.platform === 'win32' ? 'SIGTERM' : 'SIGKILL');
+});
+
+test('stdin pipe closure waits for exit status on every platform', async (t) => {
+  for (const code of ['EPIPE', 'EOF', 'ERR_STREAM_DESTROYED']) {
+    for (const synchronous of [false, true]) {
+      for (const exitCode of [0, 7]) {
+        const runner = runnerFor(t, {
+          spawn(file, args, options) {
+            if (args[0] === '--version') return spawn(file, args, options);
+            const child = fakeChild();
+            const error = Object.assign(new Error('private input'), { code });
+            if (synchronous) child.stdin.end = () => { throw error; };
+            queueMicrotask(() => {
+              if (!synchronous) child.stdin.emit('error', error);
+              child.emit('exit', exitCode);
+              child.emit('close', exitCode);
+            });
+            return child;
+          },
+        });
+        assert.deepEqual(await runner.run([], { input: 'private' }), exitCode === 0 ? success() : failure('exit', exitCode));
+      }
+    }
+  }
+});
+
+test('unresponsive probe and command deterministically escalate on all platforms', { timeout: 3000 }, async (t) => {
+  for (const probe of [false, true]) {
+    const controller = new AbortController();
+    const kills = [];
+    let closed;
+    const runner = runnerFor(t, {
+      killGraceMs: 10,
+      spawn(file, args) {
+        const child = fakeChild();
+        if (!probe && args[0] === '--version') {
+          queueMicrotask(() => child.emit('close', 0));
+          return child;
+        }
+        child.pid = 12345;
+        closed = once(child, 'close');
+        child.kill = (signal) => {
+          kills.push(signal);
+          if (signal === 'SIGKILL') queueMicrotask(() => {
+            child.emit('exit', null, signal);
+            child.emit('close', null, signal);
+          });
+          return true;
+        };
+        queueMicrotask(() => probe ? runner.dispose() : controller.abort());
+        return child;
+      },
+    });
+    assert.deepEqual(await runner.run([], { signal: controller.signal }), failure('aborted'));
+    await closed;
+    assert.deepEqual(kills, ['SIGTERM', 'SIGKILL']);
+  }
 });
 
 test('all failure diagnostics are model-safe and never describe a failed search as no matches', () => {
