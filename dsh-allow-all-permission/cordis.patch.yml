@@ -1,0 +1,21 @@
+- id: permission
+  name: '@deepseek-ai/dsh-permission-presets'
+  config:
+    presets:
+      read-only:
+        sandbox: read-only
+        approval: ask
+      workspace-write:
+        sandbox: workspace-write
+        approval: ask
+      danger-full-access:
+        sandbox: danger-full-access
+        approval: never
+      allow-all:
+        sandbox: danger-full-access
+        approval: ask
+        name: 无限制全放行
+        description: 放开所有审核与沙箱限制，自动允许智能体的所有工具与外部操作。
+- insert:
+    - id: allow-all-permission
+      name: '@local/dsh-allow-all-permission'

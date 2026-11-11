@@ -12,6 +12,7 @@
 | [`dsh-model-hub`](./dsh-model-hub) | `@local/dsh-model-hub` | 统一模型池与跨渠道调度 | 汇集各挂载渠道模型，主 Agent 动态挑选子代理，支持两阶段授权与安全过滤 |
 | [`dsh-named-ssh`](./dsh-named-ssh) | `@local/dsh-named-ssh` | 独立 SSH 服务器别名工具 | 用户设置页保管凭据与主机指纹，Agent 仅通过别名受控执行远程命令 |
 | [`dsh-planner`](./dsh-planner) | `@local/dsh-planner` | 本地计划本与任务备忘 | 原生 storageDomain 持久化，提供工单、纯文本备忘、月历看板及 AI 工具 |
+| [`dsh-allow-all-permission`](./dsh-allow-all-permission) | `@local/dsh-allow-all-permission` | 无限制全放行权限预设 | 增加 `allow-all`（无限制全放行）权限模式，放开沙箱限制并自动放行智能体的所有审核与工具调用 |
 
 ---
 
